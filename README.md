@@ -270,10 +270,11 @@ This project was built to gain practical experience with:
 
 # 🖥️ Demo Preview
 
-
 <p align="center">
-  [▶️ Watch Demo Video](https://drive.google.com/file/d/18lFYOMrjtaQrUcY0EqLQDbUbEabYBXRU/view)]
+  [▶️ Watch Demo Video](https://drive.google.com/file/d/18lFYOMrjtaQrUcY0EqLQDbUbEabYBXRU/view)
+  
 </p>
+
 ---
 
 # 🏷️ GitHub Topics
