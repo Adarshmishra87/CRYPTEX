@@ -258,7 +258,7 @@ This project was built to gain practical experience with:
 # 🖥️ Demo Preview
 
 <p align="center">
-  <img src="https://drive.google.com/uc?export=view&id=18lFYOMrjtaQrUcY0EqLQDbUbEabYBXRU" width="700"/>
+  [▶️ Watch Demo Video](https://drive.google.com/file/d/18lFYOMrjtaQrUcY0EqLQDbUbEabYBXRU/view)
 </p>
 ---
 
