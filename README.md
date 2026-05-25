@@ -254,30 +254,20 @@ This project was built to gain practical experience with:
 - Scalable API Design
 
 ---
-
 # 🖥️ Demo Preview
 
 ## 📊 Trading Dashboard UI
 
 <p align="center">
-  <img src="./assets/dashboard-preview.png" width="1000"/>
+  <img src="./11.png" width="1000"/>
 </p>
 
 <p align="center">
-  <em>Real-time cryptocurrency trading dashboard with Level-2 order book, BBO, spread visualization, and live trade infrastructure.</em>
+  <em>Real-time cryptocurrency trading dashboard with Level-2 order book, spread visualization, BBO tracking, and low-latency market infrastructure.</em>
 </p>
 
 ---
 
-## 🎥 Live System Demo
-
-<p align="center">
-  <img src="./assets/demo.gif" width="1000"/>
-</p>
-
-<p align="center">
-  <em>Real-time order matching, WebSocket broadcasting, and low-latency trade execution demo.</em>
-</p>
 # 🖥️ Demo Preview
 
 
