@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRYPTEX — Matching Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0e14;
+    --bg1:       #0f1520;
+    --bg2:       #131c2a;
+    --bg3:       #192234;
+    --border:    rgba(255,255,255,0.07);
+    --border2:   rgba(255,255,255,0.12);
+    --text:      #c9d8ea;
+    --muted:     #4d6278;
+    --accent:    #3d8ef5;
+    --accent2:   #00c896;
+    --buy:       #00c896;
+    --sell:      #f0506a;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height: 44px;
+    background: var(--bg1);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+
+  .divider { width: 1px; height: 20px; background: var(--border); }
+
+  .sym-pills { display: flex; gap: 4px; }
+  .sym-pill {
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all .15s;
+    letter-spacing: 0.5px;
+  }
+  .sym-pill:hover { border-color: var(--border2); color: var(--text); }
+  .sym-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(61,142,245,0.08); }
+
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+
+  .live-badge {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; font-family: var(--mono);
+    color: var(--accent2);
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent2);
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .clock { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  /* ── MAIN LAYOUT ── */
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    grid-template-rows: 1fr 200px;
+    gap: 1px;
+    background: var(--border);
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .pane {
+    background: var(--bg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pane-header {
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .pane-title {
+    font-size: 9px;
+    font-family: var(--mono);
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .pane-body { flex: 1; overflow: hidden; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* ── BBO CARDS ── */
+  .bbo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .bbo-card {
+    background: var(--bg2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+  }
+  .bbo-label { font-size: 9px; font-family: var(--mono); color: var(--muted); letter-spacing: 1.5px; margin-bottom: 4px; }
+  .bbo-val { font-family: var(--mono); font-size: 16px; font-weight: 500; line-height: 1; }
+  .bbo-card.bid .bbo-val { color: var(--buy); }
+  .bbo-card.ask .bbo-val { color: var(--sell); }
+  .bbo-sub { font-size: 9px; font-family: var(--mono); color: var(--muted); margin-top: 3px; }
+
+  .spread-tag {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ── ORDER BOOK ── */
+  .book-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .book-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0 2px 4px;
+    font-size: 8px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  .book-cols span:last-child { text-align: right; }
+
+  .book-side { flex: 1; overflow: hidden; min-height: 0; }
+  .book-asks { display: flex; flex-direction: column-reverse; overflow: hidden; }
+  .book-bids { overflow: hidden; }
+
+  .book-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 1.5px 2px;
+    position: relative;
+    font-family: var(--mono);
+    font-size: 10px;
+    border-radius: 2px;
+    transition: background .1s;
+  }
+  .book-row:hover { background: rgba(255,255,255,0.03); }
+  .book-row .bar {
+    position: absolute; top: 0; bottom: 0; right: 0;
+    border-radius: 2px;
+    opacity: 0.08;
+  }
+  .book-row.ask .price { color: var(--sell); }
+  .book-row.bid .price { color: var(--buy); }
+  .book-row.ask .bar { background: var(--sell); }
+  .book-row.bid .bar { background: var(--buy); }
+  .book-row .qty { text-align: right; color: var(--muted); }
+  .book-divider {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 2px; flex-shrink: 0;
+  }
+  .book-divider-line { flex: 1; height: 1px; background: var(--border); }
+  .book-divider-mid { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 500; }
+
+  /* ── CENTER: CHART + STATS ── */
+  .center-pane {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .price-bar {
+    padding: 12px 18px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .last-price { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--text); }
+  .price-chg {
+    font-family: var(--mono); font-size: 11px;
+    padding: 2px 7px; border-radius: 4px;
+  }
+  .price-chg.up { background: rgba(0,200,150,0.12); color: var(--buy); }
+  .price-chg.dn { background: rgba(240,80,106,0.12); color: var(--sell); }
+
+  .chart-area { flex: 1; padding: 14px 18px; min-height: 0; position: relative; }
+  #depthCanvas { width: 100%; height: 100%; display: block; }
+
+  .stats-row {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+  .stat-label { font-size: 8px; font-family: var(--mono); color: var(--muted); letter-spacing: 1.5px; margin-bottom: 4px; }
+  .stat-val { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent2); }
+
+  /* ── TRADE FEED ── */
+  .trade-pane {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .trade-cols {
+    display: grid;
+    grid-template-columns: 52px 1fr 60px 44px;
+    gap: 4px;
+    padding: 6px 14px;
+    font-size: 8px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .trade-feed { flex: 1; overflow-y: auto; overflow-x: hidden; }
+  .trade-feed::-webkit-scrollbar { width: 3px; }
+  .trade-feed::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .trade-row {
+    display: grid;
+    grid-template-columns: 52px 1fr 60px 44px;
+    gap: 4px;
+    align-items: center;
+    padding: 4px 14px;
+    font-family: var(--mono);
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    animation: slideIn .15s ease;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; } }
+  .trade-row .t-time { color: var(--muted); font-size: 9px; }
+  .trade-row .t-price.buy { color: var(--buy); }
+  .trade-row .t-price.sell { color: var(--sell); }
+  .trade-row .t-qty { color: var(--text); }
+  .trade-row .t-badge {
+    font-size: 8px; padding: 1px 5px; border-radius: 3px;
+    letter-spacing: 0.5px; font-weight: 500; text-align: center;
+  }
+  .trade-row .t-badge.buy { background: rgba(0,200,150,0.12); color: var(--buy); }
+  .trade-row .t-badge.sell { background: rgba(240,80,106,0.12); color: var(--sell); }
+
+  /* ── ORDER FORM ── */
+  .form-pane {
+    grid-column: 1;
+    grid-row: 2;
+    background: var(--bg1);
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+  }
+
+  .side-toggle { display: grid; grid-template-columns: 1fr 1fr; margin: 10px 14px 0; gap: 4px; }
+  .side-btn {
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg2);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s;
+    color: var(--muted);
+  }
+  .side-btn.buy.active { background: rgba(0,200,150,0.12); border-color: rgba(0,200,150,0.4); color: var(--buy); }
+  .side-btn.sell.active { background: rgba(240,80,106,0.12); border-color: rgba(240,80,106,0.4); color: var(--sell); }
+
+  .form-body { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  .field-full { display: flex; flex-direction: column; gap: 3px; }
+  .field label {
+    font-size: 8px; font-family: var(--mono); color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .field input, .field select, .field-full select, .field-full input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 5px 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus, .field-full select:focus, .field-full input:focus {
+    outline: none; border-color: var(--accent);
+  }
+  select option { background: var(--bg2); }
+
+  .submit-btn {
+    width: 100%;
+    padding: 7px;
+    border: none;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    cursor: pointer;
+    margin-top: 2px;
+    transition: all .15s;
+  }
+  .submit-btn.buy { background: var(--buy); color: #04100c; }
+  .submit-btn.sell { background: var(--sell); color: #fff; }
+  .submit-btn:hover { filter: brightness(1.1); }
+  .submit-btn:active { transform: scale(0.98); }
+
+  .result-toast {
+    font-family: var(--mono); font-size: 9px;
+    padding: 4px 8px; border-radius: 4px; margin-top: 2px;
+    display: none;
+  }
+  .result-toast.ok { background: rgba(0,200,150,0.1); color: var(--buy); border: 1px solid rgba(0,200,150,0.2); }
+  .result-toast.err { background: rgba(240,80,106,0.1); color: var(--sell); border: 1px solid rgba(240,80,106,0.2); }
+
+  /* ── STATUSBAR ── */
+  .statusbar {
+    grid-column: 2;
+    grid-row: 2;
+    background: var(--bg1);
+    border-top: 1px solid var(--border);
+    padding: 0 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+  }
+  .ws-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); }
+  .ws-dot.off { background: var(--sell); animation: none; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <span class="logo">CRYPTEX</span>
+  <div class="divider"></div>
+  <div class="sym-pills" id="symPills"></div>
+  <div class="topbar-right">
+    <div class="live-badge"><div class="live-dot"></div><span id="liveStatus">CONNECTING</span></div>
+    <div class="divider"></div>
+    <span class="clock" id="clock"></span>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- LEFT: Order Book -->
+  <div class="pane" style="grid-row:1">
+    <div class="pane-header">
+      <span class="pane-title">Order Book</span>
+      <span id="spreadTag" style="font-family:var(--mono);font-size:9px;color:var(--muted)">spread —</span>
+    </div>
+    <div class="pane-body" style="padding:8px 12px">
+      <div class="bbo-row">
+        <div class="bbo-card bid">
+          <div class="bbo-label">BEST BID</div>
+          <div class="bbo-val" id="bestBid">—</div>
+          <div class="bbo-sub" id="bidQty">qty —</div>
+        </div>
+        <div class="bbo-card ask">
+          <div class="bbo-label">BEST ASK</div>
+          <div class="bbo-val" id="bestAsk">—</div>
+          <div class="bbo-sub" id="askQty">qty —</div>
+        </div>
+      </div>
+
+      <div class="book-wrap">
+        <div class="book-cols"><span>PRICE</span><span style="text-align:right">SIZE</span></div>
+        <div class="book-side" style="flex:.9;display:flex;flex-direction:column;min-height:0">
+          <div class="book-asks book-side" id="askBook" style="flex:1"></div>
+        </div>
+        <div class="book-divider">
+          <div class="book-divider-line"></div>
+          <div class="book-divider-mid" id="midPrice">—</div>
+          <div class="book-divider-line"></div>
+        </div>
+        <div class="book-side" style="flex:.9;min-height:0">
+          <div class="book-bids" id="bidBook" style="height:100%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Depth Chart + Stats -->
+  <div class="center-pane">
+    <div class="price-bar">
+      <span class="last-price" id="lastPrice">—</span>
+      <span class="price-chg" id="priceChg">—</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto" id="symLabel">BTC-USDT</span>
+    </div>
+    <div class="chart-area">
+      <canvas id="depthCanvas"></canvas>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">TRADES</div><div class="stat-val" id="sTrades">0</div></div>
+      <div class="stat-card"><div class="stat-label">VOLUME</div><div class="stat-val" id="sVol">0</div></div>
+      <div class="stat-card"><div class="stat-label">BIDS</div><div class="stat-val" id="sBids">0</div></div>
+      <div class="stat-card"><div class="stat-label">ASKS</div><div class="stat-val" id="sAsks">0</div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Trade Feed -->
+  <div class="trade-pane">
+    <div class="pane-header"><span class="pane-title">Trade Feed</span></div>
+    <div class="trade-cols">
+      <span>TIME</span><span>PRICE</span><span style="text-align:right">QTY</span><span style="text-align:right">SIDE</span>
+    </div>
+    <div class="trade-feed" id="tradeFeed"></div>
+  </div>
+
+  <!-- BOTTOM LEFT: Order Form -->
+  <div class="form-pane">
+    <div class="side-toggle">
+      <button class="side-btn buy active" onclick="setSide('buy')">BUY</button>
+      <button class="side-btn sell" onclick="setSide('sell')">SELL</button>
+    </div>
+    <div class="form-body">
+      <div class="field-full">
+        <label>Type</label>
+        <select id="oType" onchange="onTypeChange()">
+          <option value="limit">LIMIT</option>
+          <option value="market">MARKET</option>
+          <option value="ioc">IOC</option>
+          <option value="fok">FOK</option>
+          <option value="stop_loss">STOP LOSS</option>
+          <option value="stop_limit">STOP LIMIT</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field" id="priceField">
+          <label>Price</label>
+          <input type="number" id="oPrice" placeholder="0.00" step="0.01">
+        </div>
+        <div class="field">
+          <label>Qty</label>
+          <input type="number" id="oQty" placeholder="0.001" step="0.001" value="0.01">
+        </div>
+      </div>
+      <div class="field-full" id="stopField" style="display:none">
+        <label>Stop Price</label>
+        <input type="number" id="oStop" placeholder="0.00" step="0.01">
+      </div>
+      <button class="submit-btn buy" id="subBtn" onclick="placeOrder()">PLACE BUY</button>
+      <div class="result-toast" id="toast"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM CENTER: Status -->
+  <div class="statusbar">
+    <div class="ws-dot" id="wsDot"></div>
+    <span id="wsLabel">WebSocket</span>
+    <span style="color:var(--border2)">|</span>
+    <span>REST: localhost:8000</span>
+    <span style="margin-left:auto" id="latency"></span>
+    <span id="msgCnt">0 msgs</span>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+const WS  = 'ws://localhost:8000';
+let sym = 'BTC-USDT';
+let side = 'buy';
+let wsDepth = null, wsTrades = null;
+let msgs = 0, lastPx = null, openPx = null;
+let depth = { bids: [], asks: [] };
+let canvas, ctx;
+
+/* ── Init ─────────────────────────────── */
+async function init() {
+  canvas = document.getElementById('depthCanvas');
+  ctx = canvas.getContext('2d');
+  tick();
+  await loadSymbols();
+  connect(sym);
+  setInterval(fetchStats, 3000);
+  setInterval(tick, 1000);
+}
+
+function tick() {
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    n.toUTCString().split(' ')[4] + ' UTC';
+}
+
+async function loadSymbols() {
+  try {
+    const r = await fetch(`${API}/api/symbols`);
+    const d = await r.json();
+    const c = document.getElementById('symPills');
+    c.innerHTML = '';
+    d.symbols.forEach(s => {
+      const b = document.createElement('button');
+      b.className = 'sym-pill' + (s === sym ? ' active' : '');
+      b.textContent = s;
+      b.onclick = () => switchSym(s);
+      c.appendChild(b);
+    });
+    setLive(true);
+  } catch { setLive(false); }
+}
+
+function switchSym(s) {
+  sym = s;
+  document.getElementById('symLabel').textContent = s;
+  document.querySelectorAll('.sym-pill').forEach(p => p.classList.toggle('active', p.textContent === s));
+  disconnect(); connect(s);
+}
+
+/* ── WebSocket ────────────────────────── */
+function connect(s) {
+  connectWS(`${WS}/ws/depth/${s}`, e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'heartbeat') return;
+    depth = { bids: m.data.bids || [], asks: m.data.asks || [] };
+    renderBook(depth.bids, depth.asks);
+    renderChart(depth.bids, depth.asks);
+    updateBBO();
+    msgs++; document.getElementById('msgCnt').textContent = msgs + ' msgs';
+  }, d => wsDepth = d);
+
+  connectWS(`${WS}/ws/trades/${s}`, e => {
+    const m = JSON.parse(e.data);
+    if (m.type !== 'trade') return;
+    addTrade(m.data);
+    updatePrice(parseFloat(m.data.price));
+  }, d => wsTrades = d);
+}
+
+function connectWS(url, onmsg, cb) {
+  const ws = new WebSocket(url);
+  ws.onmessage = onmsg;
+  ws.onopen  = () => setLive(true);
+  ws.onerror = () => setLive(false);
+  ws.onclose = () => { setLive(false); setTimeout(() => connect(sym), 2500); };
+  cb(ws);
+}
+
+function disconnect() {
+  [wsDepth, wsTrades].forEach(w => { try { w && w.close(); } catch {} });
+}
+
+function setLive(ok) {
+  document.getElementById('wsDot').className  = 'ws-dot' + (ok ? '' : ' off');
+  document.getElementById('wsLabel').textContent = ok ? 'LIVE' : 'DISCONNECTED';
+  document.getElementById('liveStatus').textContent = ok ? 'LIVE' : 'OFFLINE';
+}
+
+/* ── Order Book ───────────────────────── */
+function renderBook(bids, asks) {
+  const maxQ = Math.max(...[...bids.slice(0,8),...asks.slice(0,8)].map(r=>parseFloat(r[1])), 0.001);
+
+  document.getElementById('askBook').innerHTML = asks.slice(0,8).reverse().map(([p,q]) => row('ask',p,q,maxQ)).join('');
+  document.getElementById('bidBook').innerHTML = bids.slice(0,8).map(([p,q]) => row('bid',p,q,maxQ)).join('');
+
+  if (bids.length && asks.length) {
+    const mid = ((parseFloat(bids[0][0])+parseFloat(asks[0][0]))/2).toFixed(2);
+    document.getElementById('midPrice').textContent = mid;
+    const sp = (parseFloat(asks[0][0])-parseFloat(bids[0][0])).toFixed(2);
+    document.getElementById('spreadTag').textContent = 'spread ' + sp;
+  }
+}
+
+function row(cls, p, q, maxQ) {
+  const pct = (parseFloat(q)/maxQ*100).toFixed(1);
+  return `<div class="book-row ${cls}">
+    <span class="price">${fmt(p)}</span>
+    <span class="qty">${parseFloat(q).toFixed(4)}</span>
+    <div class="bar" style="width:${pct}%"></div>
+  </div>`;
+}
+
+function updateBBO() {
+  const b = depth.bids, a = depth.asks;
+  if (b.length) { document.getElementById('bestBid').textContent = fmt(b[0][0]); document.getElementById('bidQty').textContent = 'qty ' + parseFloat(b[0][1]).toFixed(4); }
+  if (a.length) { document.getElementById('bestAsk').textContent = fmt(a[0][0]); document.getElementById('askQty').textContent = 'qty ' + parseFloat(a[0][1]).toFixed(4); }
+}
+
+/* ── Depth Chart ──────────────────────── */
+function renderChart(bids, asks) {
+  const W = canvas.parentElement.clientWidth;
+  const H = canvas.parentElement.clientHeight;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+  if (!bids.length || !asks.length) return;
+
+  const bL = bids.slice(0,20).map(([p,q])=>({p:parseFloat(p),q:parseFloat(q)}));
+  const aL = asks.slice(0,20).map(([p,q])=>({p:parseFloat(p),q:parseFloat(q)}));
+
+  let cumB=[], cumA=[], acc=0;
+  bL.forEach(l=>{ acc+=l.q; cumB.push({p:l.p,q:acc}); });
+  acc=0;
+  aL.forEach(l=>{ acc+=l.q; cumA.push({p:l.p,q:acc}); });
+
+  const allP=[...cumB,...cumA].map(l=>l.p);
+  const allQ=[...cumB,...cumA].map(l=>l.q);
+  const minP=Math.min(...allP), maxP=Math.max(...allP);
+  const maxQ=Math.max(...allQ);
+
+  const px=p=>((p-minP)/(maxP-minP+.001))*W;
+  const py=q=>H-4-((q/maxQ)*(H-20));
+
+  /* grid */
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
+  for(let i=0;i<=3;i++){
+    const y=H*(i/3);
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+
+  /* bids */
+  ctx.beginPath();
+  cumB.slice().reverse().forEach((l,i)=>i===0?ctx.moveTo(px(l.p),py(l.q)):ctx.lineTo(px(l.p),py(l.q)));
+  ctx.lineTo(px(cumB[0].p),H); ctx.lineTo(px(cumB[cumB.length-1].p),H); ctx.closePath();
+  ctx.fillStyle='rgba(0,200,150,0.12)'; ctx.fill();
+  ctx.strokeStyle='rgba(0,200,150,0.6)'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  cumB.slice().reverse().forEach((l,i)=>i===0?ctx.moveTo(px(l.p),py(l.q)):ctx.lineTo(px(l.p),py(l.q)));
+  ctx.stroke();
+
+  /* asks */
+  ctx.beginPath();
+  cumA.forEach((l,i)=>i===0?ctx.moveTo(px(l.p),py(l.q)):ctx.lineTo(px(l.p),py(l.q)));
+  ctx.lineTo(px(cumA[cumA.length-1].p),H); ctx.lineTo(px(cumA[0].p),H); ctx.closePath();
+  ctx.fillStyle='rgba(240,80,106,0.12)'; ctx.fill();
+  ctx.strokeStyle='rgba(240,80,106,0.6)'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  cumA.forEach((l,i)=>i===0?ctx.moveTo(px(l.p),py(l.q)):ctx.lineTo(px(l.p),py(l.q)));
+  ctx.stroke();
+
+  /* price labels */
+  ctx.fillStyle='rgba(77,98,120,0.9)'; ctx.font='9px JetBrains Mono, monospace';
+  ctx.fillText(minP.toFixed(0), 4, H-4);
+  ctx.fillText(maxP.toFixed(0), W-38, H-4);
+}
+
+/* ── Trades ───────────────────────────── */
+function addTrade(t) {
+  const feed = document.getElementById('tradeFeed');
+  const time = t.timestamp.split('T')[1].split('.')[0];
+  const s = t.aggressor_side;
+  const row = document.createElement('div');
+  row.className = 'trade-row';
+  row.innerHTML = `
+    <span class="t-time">${time}</span>
+    <span class="t-price ${s}">${fmt(t.price)}</span>
+    <span class="t-qty" style="text-align:right">${parseFloat(t.quantity).toFixed(4)}</span>
+    <span class="t-badge ${s}" style="text-align:right">${s.toUpperCase()}</span>`;
+  feed.insertBefore(row, feed.firstChild);
+  if (feed.children.length > 120) feed.lastChild.remove();
+}
+
+function updatePrice(px) {
+  if (!openPx) openPx = px;
+  const el = document.getElementById('lastPrice');
+  const chEl = document.getElementById('priceChg');
+  el.style.color = lastPx === null ? 'var(--text)' : px > lastPx ? 'var(--buy)' : 'var(--sell)';
+  setTimeout(() => el.style.color = 'var(--text)', 400);
+  lastPx = px;
+  el.textContent = fmt(px);
+  const chg = ((px - openPx) / openPx * 100).toFixed(2);
+  chEl.textContent = (chg >= 0 ? '+' : '') + chg + '%';
+  chEl.className = 'price-chg ' + (chg >= 0 ? 'up' : 'dn');
+}
+
+/* ── Stats ────────────────────────────── */
+async function fetchStats() {
+  try {
+    const r = await fetch(`${API}/api/stats/${sym}`);
+    const d = await r.json();
+    document.getElementById('sTrades').textContent = d.total_trades.toLocaleString();
+    document.getElementById('sVol').textContent = parseFloat(d.total_volume).toFixed(3);
+    document.getElementById('sBids').textContent = d.open_bids;
+    document.getElementById('sAsks').textContent = d.open_asks;
+    if (d.last_price && !lastPx) updatePrice(parseFloat(d.last_price));
+  } catch {}
+}
+
+/* ── Order Form ───────────────────────── */
+function setSide(s) {
+  side = s;
+  document.querySelectorAll('.side-btn').forEach(b => b.classList.toggle('active', b.classList.contains(s)));
+  const btn = document.getElementById('subBtn');
+  btn.className = `submit-btn ${s}`;
+  btn.textContent = `PLACE ${s.toUpperCase()}`;
+}
+
+function onTypeChange() {
+  const t = document.getElementById('oType').value;
+  document.getElementById('priceField').style.display = ['market'].includes(t) ? 'none' : '';
+  document.getElementById('stopField').style.display = ['stop_loss','stop_limit'].includes(t) ? '' : 'none';
+}
+
+async function placeOrder() {
+  const btn = document.getElementById('subBtn');
+  const toast = document.getElementById('toast');
+  const body = {
+    symbol: sym, order_type: document.getElementById('oType').value,
+    side, quantity: document.getElementById('oQty').value,
+  };
+  const p = document.getElementById('oPrice').value;
+  const sp = document.getElementById('oStop').value;
+  if (p) body.price = p;
+  if (sp) body.stop_price = sp;
+
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    const t0 = performance.now();
+    const r = await fetch(`${API}/api/orders`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    const lat = (performance.now()-t0).toFixed(1);
+    document.getElementById('latency').textContent = lat + 'ms';
+    const d = await r.json();
+    if (r.ok) {
+      toast.className = 'result-toast ok';
+      toast.textContent = `✓ ${d.status} · filled ${d.filled_quantity} · ${d.trades.length} trade(s)`;
+    } else {
+      toast.className = 'result-toast err';
+      toast.textContent = `✗ ${d.detail || 'error'}`;
+    }
+  } catch {
+    toast.className = 'result-toast err';
+    toast.textContent = '✗ server unreachable';
+  }
+  toast.style.display = 'block';
+  btn.disabled = false;
+  setSide(side);
+}
+
+/* ── Seed ─────────────────────────────── */
+async function seed() {
+  const sells = [50200,50175,50150,50125,50100,50080,50060,50040,50020,50005];
+  const buys  = [49995,49975,49950,49925,49900,49850,49800,49750,49700,49650];
+  for (const price of sells) {
+    await fetch(`${API}/api/orders`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({symbol:'BTC-USDT',order_type:'limit',side:'sell',quantity:(Math.random()*.5+.05).toFixed(4),price:String(price)})
+    }).catch(()=>{});
+  }
+  for (const price of buys) {
+    await fetch(`${API}/api/orders`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({symbol:'BTC-USDT',order_type:'limit',side:'buy',quantity:(Math.random()*.5+.05).toFixed(4),price:String(price)})
+    }).catch(()=>{});
+  }
+}
+
+function fmt(p) {
+  const n = parseFloat(p);
+  return n >= 1000 ? n.toFixed(2) : n >= 1 ? n.toFixed(4) : n.toFixed(6);
+}
+
+init().then(() => setTimeout(seed, 600));
+</script>
+</body>
+</html>
