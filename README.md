@@ -258,7 +258,7 @@ This project was built to gain practical experience with:
 # 🖥️ Demo Preview
 
 <p align="center">
-  <img src="https://media.giphy.com/media/coxQHKASG60HrHtvkt/giphy.gif" width="700"/>
+  <img src="https://drive.google.com/file/d/18lFYOMrjtaQrUcY0EqLQDbUbEabYBXRU/view?usp=sharing" width="700"/>
 </p>
 
 ---
