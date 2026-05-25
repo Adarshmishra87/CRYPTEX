@@ -258,9 +258,8 @@ This project was built to gain practical experience with:
 # 🖥️ Demo Preview
 
 <p align="center">
-  <img src="https://drive.google.com/file/d/18lFYOMrjtaQrUcY0EqLQDbUbEabYBXRU/view?usp=sharing" width="700"/>
+  <img src="https://drive.google.com/uc?export=view&id=18lFYOMrjtaQrUcY0EqLQDbUbEabYBXRU" width="700"/>
 </p>
-
 ---
 
 # 🏷️ GitHub Topics
